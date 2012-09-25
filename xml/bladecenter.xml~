@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<bladecenter>
+   <!-- 
+     SNMP session parameters:
+        This configuration is intended to override the default settings
+        specified in "Snmp" connection class (see snmp.py for details)
+        This way proper connection and data transfer are ensured, based
+        on IBM BladeCenter's SNMP implementation particularities
+   -->
+   
+   <snmp>
+       <version    repr="Version"    value="1"               />
+       <desthost   repr="DestHost"   value="192.168.70.125"  />
+       <community  repr="Community"  value="lop7Ocfavy"      />
+       <username   repr="SecName"    value="USERID"          />
+       <timeout    repr="Timeout"    value="5000000"         />
+   </snmp>
+
+   <!-- OIDs definition section -->
+
+   <oids>
+      <oid descr="pd1ModuleAllocatedPowerCurrent"  value="iso.3.6.1.4.1.2.3.51.2.2.10.2.1.1.7" />
+      <oid descr="pd2ModuleAllocatedPowerCurrent"  value="iso.3.6.1.4.1.2.3.51.2.2.10.3.1.1.7" />
+      <oid descr="pd1ModuleName"                   value="iso.3.6.1.4.1.2.3.51.2.2.10.2.1.1.5" />
+      <oid descr="pd2ModuleName"                   value="iso.3.6.1.4.1.2.3.51.2.2.10.3.1.1.5" />
+   </oids>
+
+</bladecenter>
