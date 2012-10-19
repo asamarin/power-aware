@@ -3,11 +3,15 @@
 import sys
 import snmp
 import xmlparser
+import time
 
 class BladePower():
     """ Clase para la gestion de energia del IBM BladeCenter """
     
-    # Power info dictionary indexes
+    # Threshold value, in seconds, to distinguish fresh values from SNMP queries
+    EPSILON = 2
+
+    # Power data dictionary indexes
     POWER = "power"
     TEMPS = "temps"
     VOLTS = "volts"
@@ -24,7 +28,7 @@ class BladePower():
 
     def __init__(self, xmlsettings_file=None):
         try:
-            self.power_info = {}
+            self.power_data = {}
             self.snmp_settings = {}
             self.oids = {}
             self.module_names = []
@@ -33,20 +37,40 @@ class BladePower():
             if xmlsettings_file is not None:
                 self.load_blade_settings(xmlsettings_file)
                 self.blade_snmp = snmp.SNMP(**self.snmp_settings)
+                #print "########"
+                #print self.power_data
+                print "Carga inicial de datos"
                 self.module_names = self.get_module_names()
-                power_domains = self.get_power_info()
-                self.power_info[self.POWER] = dict(zip(self.module_names, power_domains))
-                print "########"
-                #print self.power_info
-                sorted_modules = self.power_info[self.POWER].keys()
+                self.update_power_data()
+                sorted_modules = self.power_data[self.POWER].keys()
                 sorted_modules.sort()
                 for module in sorted_modules:
-                    print module, ':', self.power_info[self.POWER][module]
-                print "########"
-                print "Consumo de verode04: ", self.power_info[self.POWER]["verode04"]
+                    print module, ':', self.power_data[self.POWER][module]
+                test_list = ["verode11", "verode12", "verode13", "verode14", "verode15"]
+                self.test_run(test_list)
+                #print "########"
+                #print "Consumo de verode04: ", self.power_data[self.POWER]["verode04"]
 
         except Exception as e:
             print >> sys.stderr, e
+
+    def update_power_data(self):
+        power_domains = self.get_power_data()
+        self.power_data[self.POWER] = dict(zip(self.module_names, power_domains))
+
+    def test_run(self, *nodes):
+        print "Ctrl-C para terminar"
+        while(True):
+            print "Refrescando datos de consumo..."
+            ti = time.time()
+            self.update_power_data()
+            tf = time.time()
+            if (tf - ti) < self.EPSILON:
+                print "T = ", (tf - ti), " -> Peticion cacheada, descartada"
+                continue
+            for node in nodes:
+                print "T = ", (tf - ti), " -> Peticion refrescada"
+                print node, ':', self.power_data[self.POWER][node]
 
     def load_blade_settings(self, xmlsettings_file):
         self.xmlparser.parse_file(xmlsettings_file)
@@ -64,21 +88,22 @@ class BladePower():
     def get_module_names(self):
         print "[DEBUG] Getting power domain 1 modules..."
         pd1modules = self.blade_snmp.walk(self.oids[self.PD1_MODULES])
-        print pd1modules
+        #print pd1modules
         print "[DEBUG] Getting power domain 2 modules..."
         pd2modules = self.blade_snmp.walk(self.oids[self.PD2_MODULES])
-        print pd2modules
+        #print pd2modules
         return pd1modules + pd2modules
 
-    def get_power_info(self):
-        print "[DEBUG] Getting power domain 1 info..."
+    def get_power_data(self):
+        print "[DEBUG] Getting power domain 1 data..."
         powerdomain1 = self.blade_snmp.walk(self.oids[self.PD1_CURRPWR])
-        print powerdomain1
-        print "[DEBUG] Getting power domain 2 info..."
+        #print powerdomain1
+        print "[DEBUG] Getting power domain 2 data..."
         powerdomain2 = self.blade_snmp.walk(self.oids[self.PD2_CURRPWR])
-        print powerdomain2
+        #print powerdomain2
         return powerdomain1 + powerdomain2
 
 
 if __name__ == '__main__':
     bc = BladePower("./xml/bladecenter.xml")
+    
