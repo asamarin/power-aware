@@ -58,18 +58,22 @@ class BladePower():
         power_domains = self.get_power_data()
         self.power_data[self.POWER] = dict(zip(self.module_names, power_domains))
 
-    def test_run(self, *nodes):
+    def test_run(self, nodes):
         print "Ctrl-C para terminar"
+        t_refresh = 0
         while(True):
             print "Refrescando datos de consumo..."
             ti = time.time()
             self.update_power_data()
             tf = time.time()
-            if (tf - ti) < self.EPSILON:
-                print "T = ", (tf - ti), " -> Peticion cacheada, descartada"
+            t_query = (tf - ti)
+            if t_query < self.EPSILON:
+                print "T = ", t_query, " -> Peticion cacheada, descartada"
+                t_refresh += t_query
                 continue
+            print "T =", t_query, "-> Peticion refrescada, tiempo total =", t_refresh + t_query
+            t_refresh = 0
             for node in nodes:
-                print "T = ", (tf - ti), " -> Peticion refrescada"
                 print node, ':', self.power_data[self.POWER][node]
 
     def load_blade_settings(self, xmlsettings_file):
@@ -95,10 +99,10 @@ class BladePower():
         return pd1modules + pd2modules
 
     def get_power_data(self):
-        print "[DEBUG] Getting power domain 1 data..."
+        #print "[DEBUG] Getting power domain 1 data..."
         powerdomain1 = self.blade_snmp.walk(self.oids[self.PD1_CURRPWR])
         #print powerdomain1
-        print "[DEBUG] Getting power domain 2 data..."
+        #print "[DEBUG] Getting power domain 2 data..."
         powerdomain2 = self.blade_snmp.walk(self.oids[self.PD2_CURRPWR])
         #print powerdomain2
         return powerdomain1 + powerdomain2
