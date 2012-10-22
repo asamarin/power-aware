@@ -1,0 +1,1 @@
+Info a fichero -> Timestamp, delay, consumo (pueden ser con o sin GPU), en columnas
