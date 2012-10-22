@@ -5,8 +5,9 @@ import os
 import snmp
 import xmlparser
 import time
+import threading
 
-class PowerAware():
+class PowerAware(threading.Thread):
     """ Clase para la gestion de energia del IBM BladeCenter """
     
     # Threshold value, in seconds, to distinguish fresh values from SNMP queries
@@ -28,35 +29,37 @@ class PowerAware():
     PD2_MODULES = "pd2ModuleName"
 
     def __init__(self, xmlsettings_file=None):
-        try:
-            self.power_data = {}
-            self.snmp_settings = {}
-            self.oids = {}
-            self.module_names = []
-            self.xmlparser = xmlparser.XMLParser()
+        super(PowerAware, self).__init__()
+        self._stop = threading.Event()
 
-            if xmlsettings_file is not None:
-                self.load_snmp_settings(xmlsettings_file)
-                self.blade_snmp = snmp.SNMP(**self.snmp_settings)
-                self.module_names = self.get_module_names()
-                #self.update_power_data()
-                #sorted_modules = self.power_data[self.POWER].keys()
-                #sorted_modules.sort()
-                #for module in sorted_modules:
-                #    print module, ':', self.power_data[self.POWER][module]
+        self.power_data = {}
+        self.snmp_settings = {}
+        self.oids = {}
+        self.module_names = []
+        self.xmlparser = xmlparser.XMLParser()
 
-        except Exception as e:
-            print >> sys.stderr, e
+        if xmlsettings_file is not None:
+            self.load_snmp_settings(xmlsettings_file)
+            self.blade_snmp = snmp.SNMP(**self.snmp_settings)
+
+    def update_module_names(self):
+        self.module_names = self.get_module_names()
 
     def update_power_data(self):
         self.power_data[self.POWER] = dict(zip(self.module_names, self.get_power_data()))
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
 
     def dump(self, nodes):
         #print "Ctrl-C para terminar"
         if not os.path.exists('./dumps'):
             os.mkdir('./dumps')
         t_refresh = 0
-        while(True):
+        while not self.stopped():
             #print "Refrescando datos de consumo..."
             ti = time.time()
             self.update_power_data()
@@ -70,7 +73,7 @@ class PowerAware():
             for node in nodes:
                 path = './dumps/' + node + '.txt'
                 with open(path, 'a') as dumpfile:
-                    dumpfile.write("%10.3f %4.3f %d\n" % tf, t_refresh + t_query, self.power_data[self.POWER][node])
+                    dumpfile.write("%10.2f\t%4.2f\t%d\n" % (tf, t_refresh + t_query, int(self.power_data[self.POWER][node][:-1])))
             t_refresh = 0
 
     def load_snmp_settings(self, xmlsettings_file):
@@ -98,9 +101,3 @@ class PowerAware():
         powerdomain2 = self.blade_snmp.walk(self.oids[self.PD2_CURRPWR])
         return powerdomain1 + powerdomain2
 
-
-if __name__ == '__main__':
-    bcenter = PowerAware("./xml/bladecenter.xml")
-    test_list = ["verode11", "verode12", "verode13", "verode14", "verode15"]
-    bcenter.dump(test_list)
-    
