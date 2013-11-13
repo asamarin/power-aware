@@ -5,6 +5,7 @@ import sys
 import time
 import cpu
 import pi
+import subprocess
 
 MSR_RAPL_POWER_UNIT = 0x606
 
@@ -86,8 +87,10 @@ if __name__ == '__main__':
 
     #print "Sleeping 1 second..."
     #time.sleep(1)
-    print "Calculating 30000 pi decimals..."
-    pi.pi(30000)
+    #print "Calculating 30000 pi decimals..."
+    #pi.pi(30000)
+    print "Calculating MMM..."
+    subprocess.call(["mpirun", "-np 2"])
 
     cpu0_after = read_core_msr(0, MSR_PKG_ENERGY_STATUS) * units['energy']
     cpu1_after = read_core_msr(1, MSR_PKG_ENERGY_STATUS) * units['energy']
